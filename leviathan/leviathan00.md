@@ -2,7 +2,7 @@ Nos conectamos al primer nivel utilizando el bash script `sshleviathan`, que
 utiliza internamente `sshpass` para conectarse al nivel
 
 ```bash
-$ ./sshleviathan 0 leviathan0
+$ ./sshleviathan.sh 0 leviathan0
 ```
 
 Inspeccionando la carpeta de usuario, notamos un archivo
