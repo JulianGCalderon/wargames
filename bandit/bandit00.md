@@ -1,5 +1,4 @@
-
-utilizamos `sshpass` para poder pasar la contraseña como argumento al programa.
+Utilizamos `sshpass` para poder pasar la contraseña como argumento al programa.
 
 ```bash
 ssh -p 2220 bandit0@bandit.labs.overthewire.org 
