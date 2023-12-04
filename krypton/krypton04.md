@@ -1,27 +1,143 @@
-Creamos una carpeta temporal en la que trabajaremos
+Debido a que la desencriptación se puede ejecutar local utilizamos el script
+`scpkrypton.sh` para descargar los archivos necesarios.
 
 ```bash
-$ cd $(mktemp -d)
-$ cp /krypton/krypton4/* -t .
+$ ./scpkrypton.sh 4 BRUTE krypton04/
 ```
 
-Como sabemos la longitud de la clave, debemos analizar juntas las letras que
-serían codificadas con el mismo elemento de la clave. Si la clave tiene seis
-letras, entonces haremos un análisis de las frecuencias para las letras en las
-posiciones 0, 6, 12, 18, ...
-
-Podemos utilizar sed para quitar los espacios, y luego colocaremos cada seis
-letras en una linea distinta. Hacemos esto para ambos archivos, asi obtenemos un
-único archivo.
+Primero, eliminamos los espacios de los archivos de entrada, con:
 
 ```bash
-$ sed 's/ //g' found1 found2 | sed 's/\(.\{,6\}\)/\1\n/g' | found
+sed 's/ //g'
 ```
 
-Luego, creamos un script de perl que lea cada linea, haga un análisis de
-frecuencias distinto para cada posición, y devuelve la letra más común en cada
-uno.
+Despues, separamos las palabras cada seis letras, para poder analizarlas según
+la parte de la clave utilizada.
 
 ```bash
+sed 's/\(.\{,6\}\)/\1\n/g'
+```
 
+El siguiente paso consiste en obtener la letras mas común para cada columna,
+podemos hacerlo con `perl`.
+
+```bash
+perl -F'' -M"List::UtilsBy max_by" -lane 'END { for $e (@A) { print max_by { %$e{$_} } keys %$e }} while (my ($i, $e) = each @F) { $A[$i]{$e}++}'
+```
+
+Finalmente, realizamos un aritmetica con los codigos ascii de las letras mas
+comunes del cifrado, y la letras más común del ingles, para obtener la clave
+original.
+
+```bash
+perl -lpne '$_ = chr((ord($_) - ord("E")) % 26 + ord("A"))'
+```
+
+Finalmente juntamos en una sola linea:
+
+```bash
+tr -d '\n'
+```
+
+El resultado de todos estos comandos en cadena nos da una clave probable del
+cifrado:
+
+```bash
+$ sed 's/ //g' found1 found2 | sed 's/\(.\{,6\}\)/\1\n/g' | perl -F'' -M"List::UtilsBy max_by" -lane 'END { for $e (@A) { print max_by { %$e{$_} } keys %$e }} while (my ($i, $e) = each @F) { $A[$i]{$e}++}' | perl -lpne '$_ = chr((ord($_) - ord("E")) % 26 + ord("A"))' | tr -d '\n'
+FREKEY
+```
+
+Una vez tenemos el código, podemos desencriptar los archivos. Primero quitamos
+los espacios y separamos cada 6 caracteres, y luego utilizamos `perl` para aplicar la rotación inversa.
+
+```bash
+sed 's/ //g' krypton5 | sed 's/\(.\{,6\}\)/\1\n/g' |  perl -F'' -lane 'BEGIN { $KEY = "FREKEY"} while (($i, $e) = each @F) { print(chr(((ord($e) - ord(substr($KEY, $i, 1))) % 26) + ord("A")))}' 
+```
+
+Finalmente unimos el resultado en una sola linea, con `tr`.
+
+```bash
+tr -d '\n'
+```
+
+El resultado de estos comandos en cadena nos da la contraseña desencriptada.
+
+```bash
+$ sed 's/krypton5 | sed 's/\(.\{,6\}\)/\1\n/g' |  perl -F'' -lane 'BEGIN { $KEY = "FREKEY"} while (($i, $e) = each @F) { print(chr(((ord($e) - ord(substr($KEY, $i, 1))) % 26) + ord("A")))}' | tr -d '\n'
+CLEARTEXT
+```
+
+Si se prefiere armar scripts para un código mas prolijo, podemos utilizar
+únicamente perl.
+
+Primero necesitamos un script que obtenga la clave de encriptado a partir de
+textos encriptados.
+
+```perl
+use strict;
+use warnings;
+use List::UtilsBy qw(max_by);
+use List::MoreUtils qw(natatime);
+
+my $MOST_COMMON_CHARACTER = "E";
+
+my @frequencies_by_position;
+while (<>) {
+    chomp;
+    tr/ //d;
+    my @characters = split '';
+    my $groups = natatime(6, @characters);
+    while (my @group = $groups->())
+    {
+        while (my ($index, $char) = each @group) {
+            $frequencies_by_position[$index]{$char}++;
+        }
+    }
+}
+
+while (my ($position, $frequencies) = each @frequencies_by_position) {
+    my $most_frequent = max_by { %$frequencies{$_} } keys %$frequencies;
+
+    my $key = abs_chr((abs_ord($most_frequent) - abs_ord($MOST_COMMON_CHARACTER)) % 26);
+
+    print "$key";
+}
+
+print "\n";
+
+sub abs_ord { return (ord($_[0]) - ord("A")) }
+sub abs_chr { return (chr($_[0] + ord("A"))) }
+```
+
+Luego necesitamos otro script que se encargue de la desencriptación.
+
+```perl
+use strict;
+use warnings;
+use List::MoreUtils qw(natatime);
+
+my $KEY = "FREKEY";
+
+while (<>) {
+    chomp;
+    tr/ //d;
+    my @characters = split '';
+    my $groups = natatime(6, @characters);
+    while (my @group = $groups->())
+    {
+        while (my ($index, $char) = each @group) {
+            print decode($char, $index);
+        }
+    }
+    print "\n";
+}
+
+sub decode {
+    my $keychar = substr($KEY, $_[1], 1);
+    return abs_chr((26 + abs_ord($_[0]) - abs_ord($keychar)) % 26)
+}
+
+
+sub abs_ord { return (ord($_[0]) - ord("A")) }
+sub abs_chr { return (chr($_[0] + ord("A"))) }
 ```
