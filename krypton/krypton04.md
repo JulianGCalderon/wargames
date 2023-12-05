@@ -18,7 +18,7 @@ la parte de la clave utilizada.
 sed 's/\(.\{,6\}\)/\1\n/g'
 ```
 
-El siguiente paso consiste en obtener la letras mas común para cada columna,
+El siguiente paso consiste en obtener la letra mas común para cada columna,
 podemos hacerlo con `perl`.
 
 ```bash
@@ -71,73 +71,11 @@ Si se prefiere armar scripts para un código mas prolijo, podemos utilizar
 únicamente perl.
 
 Primero necesitamos un script que obtenga la clave de encriptado a partir de
-textos encriptados.
+textos encriptados. Esta utilizará los archivos enviados por parámetro para
+desencriptar una clave de longitud especificada por variable de entorno LENGTH:
+`vignere_crack.pl`.
 
-```perl
-use strict;
-use warnings;
-use List::UtilsBy qw(max_by);
-use List::MoreUtils qw(natatime);
+Luego necesitamos otro script que se encargue de la desencriptación. Este
+recibira la clave como variable de entorno, y decodificara los archivos enviados
+por parámetro: `vignere_decode.pl`.
 
-my $MOST_COMMON_CHARACTER = "E";
-
-my @frequencies_by_position;
-while (<>) {
-    chomp;
-    tr/ //d;
-    my @characters = split '';
-    my $groups = natatime(6, @characters);
-    while (my @group = $groups->())
-    {
-        while (my ($index, $char) = each @group) {
-            $frequencies_by_position[$index]{$char}++;
-        }
-    }
-}
-
-while (my ($position, $frequencies) = each @frequencies_by_position) {
-    my $most_frequent = max_by { %$frequencies{$_} } keys %$frequencies;
-
-    my $key = abs_chr((abs_ord($most_frequent) - abs_ord($MOST_COMMON_CHARACTER)) % 26);
-
-    print "$key";
-}
-
-print "\n";
-
-sub abs_ord { return (ord($_[0]) - ord("A")) }
-sub abs_chr { return (chr($_[0] + ord("A"))) }
-```
-
-Luego necesitamos otro script que se encargue de la desencriptación.
-
-```perl
-use strict;
-use warnings;
-use List::MoreUtils qw(natatime);
-
-my $KEY = "FREKEY";
-
-while (<>) {
-    chomp;
-    tr/ //d;
-    my @characters = split '';
-    my $groups = natatime(6, @characters);
-    while (my @group = $groups->())
-    {
-        while (my ($index, $char) = each @group) {
-            print decode($char, $index);
-        }
-    }
-    print "\n";
-}
-
-sub decode {
-    my $keychar = substr($KEY, $_[1], 1);
-    return abs_chr((26 + abs_ord($_[0]) - abs_ord($keychar)) % 26)
-}
-
-
-sub abs_ord { return (ord($_[0]) - ord("A")) }
-sub abs_chr { return (chr($_[0] + ord("A"))) }
-```
